@@ -1,5 +1,8 @@
 package join.algorithms;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Consumer;
 
 import join.datastructures.Block;
@@ -28,6 +31,7 @@ public class HashEquiJoin implements Join {
 			for (Tuple current : currentOriginal) {
 				String valueToHash = current.getData(joinAttribute);
 				int hashCode = (valueToHash.hashCode() & 0x7fffffff) % numBuckets;
+				hashCode = 0;
 				if (currentBlocks[hashCode] == null) {
 					currentBlocks[hashCode] = hashedRel[hashCode].getFreeBlock(blockManager);
 					blockManager.pin(currentBlocks[hashCode]);
@@ -40,6 +44,11 @@ public class HashEquiJoin implements Join {
 				}
 			}
 		}
+		for (Block currentBlock : currentBlocks) {
+			if (currentBlock == null)
+				continue;
+			blockManager.unpin(currentBlock);
+		}
 		return hashedRel;
 	}
 
@@ -47,13 +56,44 @@ public class HashEquiJoin implements Join {
 	public void join(Relation relation1, int joinAttribute1, Relation relation2, int joinAttribute2,
 					 Consumer<Tuple> consumer) {
 		// TODO: hash
+		System.out.println(relation1.getBlockCount());
 		Relation[] hashedRel1 = hash(relation1, joinAttribute1);
 		Relation[] hashedRel2 = hash(relation2, joinAttribute2);
 
-		NestedLoopEquiJoin nestedLoopJoin = new NestedLoopEquiJoin(blockManager);
+		/*NestedLoopEquiJoin nestedLoopJoin = new NestedLoopEquiJoin(blockManager);
 		for (int i = 0; i < numBuckets; ++i) {
 			// TODO: join
 			nestedLoopJoin.join(hashedRel1[i], joinAttribute1, hashedRel2[i], joinAttribute2, consumer);
+		}*/
+		int size1 = Arrays.stream(hashedRel1).map((Relation::getBlockCount)).reduce(0, Integer::sum);
+		int size2 = Arrays.stream(hashedRel2).map((Relation::getBlockCount)).reduce(0, Integer::sum);
+		boolean swapped = size1 > size2;
+		Relation[] smaller = swapped ? hashedRel2 : hashedRel1;
+		Relation[] larger = swapped ? hashedRel1 : hashedRel2;
+
+		List<Block> blocksOfSmaller = new ArrayList<>(smaller.length);
+		for (Relation relation : smaller) {
+			for (Block block : relation) {
+				System.out.println("Pinning at outer");
+				blockManager.pin(block);
+				blocksOfSmaller.add(block);
+			}
+		}
+		for (Relation relation : larger){
+			for (Block currentRight : relation) {
+				System.out.println("Pinning at inner");
+				blockManager.pin(currentRight);
+				for (Block currentLeft : blocksOfSmaller) {
+					Join.joinTuples(currentLeft, swapped ? joinAttribute2 : joinAttribute1, currentRight, swapped ? joinAttribute1 : joinAttribute2, consumer);
+				}
+				blockManager.unpin(currentRight);
+			}
+		}
+		for (Relation relation : smaller) {
+			for (Block block : relation) {
+				blockManager.unpin(block);
+				blocksOfSmaller.add(block);
+			}
 		}
 	}
 
