@@ -30,7 +30,7 @@ public class HashEquiJoin implements Join {
 			blockManager.pin(currentOriginal);
 			for (Tuple current : currentOriginal) {
 				String valueToHash = current.getData(joinAttribute);
-				int hashCode = (valueToHash.hashCode() & 0x7fffffff) % numBuckets;
+				int hashCode = (valueToHash.hashCode() % numBuckets + numBuckets) % numBuckets;
 				if (currentBlocks[hashCode] == null) {
 					currentBlocks[hashCode] = hashedRel[hashCode].getFreeBlock(blockManager);
 					blockManager.pin(currentBlocks[hashCode]);
