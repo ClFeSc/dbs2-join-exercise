@@ -95,7 +95,6 @@ public class HashEquiJoin implements Join {
 			}
 			for (Block block : smaller) {
 				blockManager.unpin(block);
-				blocksOfSmaller.add(block);
 			}
 		}
 	}
