@@ -68,21 +68,21 @@ public class HashEquiJoin implements Join {
 //		}
 
 		// Using One-pass join - optimal IO (for a hash join) as the smaller bucket has to fit into memory
-		int size1 = Arrays.stream(hashedRel1).map((Relation::getBlockCount)).reduce(0, Integer::sum);
-		int size2 = Arrays.stream(hashedRel2).map((Relation::getBlockCount)).reduce(0, Integer::sum);
-		boolean swapped = size1 > size2;
-		Relation[] smaller = swapped ? hashedRel2 : hashedRel1;
-		Relation[] larger = swapped ? hashedRel1 : hashedRel2;
+		for (int i = 0; i < numBuckets; ++i) {
+			Relation rel1 = hashedRel1[i];
+			Relation rel2 = hashedRel2[i];
+			int size1 = rel1.getBlockCount();
+			int size2 = rel2.getBlockCount();
+			boolean swapped = size1 > size2;
+			Relation smaller = swapped ? rel2 : rel1;
+			Relation larger = swapped ? rel1 : rel2;
 
-		List<Block> blocksOfSmaller = new ArrayList<>(smaller.length);
-		for (Relation relation : smaller) {
-			for (Block block : relation) {
+			List<Block> blocksOfSmaller = new ArrayList<>(smaller.getBlockCount());
+			for (Block block : smaller) {
 				blockManager.pin(block);
 				blocksOfSmaller.add(block);
 			}
-		}
-		for (Relation relation : larger){
-			for (Block currentRight : relation) {
+			for (Block currentRight : larger) {
 				blockManager.pin(currentRight);
 				for (Block currentLeft : blocksOfSmaller) {
 					Join.joinTuples(currentLeft,
@@ -93,9 +93,7 @@ public class HashEquiJoin implements Join {
 				}
 				blockManager.unpin(currentRight);
 			}
-		}
-		for (Relation relation : smaller) {
-			for (Block block : relation) {
+			for (Block block : smaller) {
 				blockManager.unpin(block);
 				blocksOfSmaller.add(block);
 			}
