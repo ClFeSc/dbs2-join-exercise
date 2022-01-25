@@ -18,7 +18,7 @@ public class HashEquiJoin implements Join {
 		this.blockManager = blockManager;
 	}
 
-	private ArrayList<ArrayList<Block>> fillBuckets(Relation relation,int joinattribute){
+	private ArrayList<ArrayList<Block>> fillBuckets(Relation relation, int joinattribute){
 		//create buckets
 		ArrayList<ArrayList<Block>> buckets = new ArrayList<>();
 		int[] currentBlocks = new int[numBuckets];
@@ -37,10 +37,10 @@ public class HashEquiJoin implements Join {
 				int i = (h % numBuckets + numBuckets) % numBuckets;
 				if(!buckets.get(i).get(currentBlocks[i]).addTuple(tuple)){
 					blockManager.unpin(buckets.get(i).get(currentBlocks[i]));
-					currentBlocks[i]+=1;
+					currentBlocks[i]++;
 					buckets.get(i).add(blockManager.getFreeBlock(false));
 					blockManager.pin(buckets.get(i).get(currentBlocks[i]));
-				};
+				}
 			}
 			blockManager.unpin(block);
 		}
@@ -62,13 +62,14 @@ public class HashEquiJoin implements Join {
 		ArrayList<ArrayList<Block>> sbuckets = fillBuckets(s, swapped ? joinAttribute2 : joinAttribute1);
 		ArrayList<ArrayList<Block>> rbuckets = fillBuckets(r, swapped ? joinAttribute1 : joinAttribute2);
 
-		NestedLoopEquiJoin nestedLoopJoin = new NestedLoopEquiJoin(blockManager);
+		// Not needed, commented out to save space
+		// NestedLoopEquiJoin nestedLoopJoin = new NestedLoopEquiJoin(blockManager);
 		for (int i = 0; i < numBuckets; ++i) {
 			// TODO: join
 			for (Block block : sbuckets.get(i)){
 				blockManager.pin(block);
 			}
-			for (Block rblock :rbuckets.get(i)){
+			for (Block rblock : rbuckets.get(i)){
 				blockManager.pin(rblock);
 				for (Block sblock : sbuckets.get(i)) {
 					Join.joinTuples(swapped ? rblock : sblock, joinAttribute1,
