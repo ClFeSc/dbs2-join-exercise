@@ -97,7 +97,6 @@ public class HashEquiJoin implements Join {
 		for (Relation relation : smaller) {
 			for (Block block : relation) {
 				blockManager.unpin(block);
-				blocksOfSmaller.add(block);
 			}
 		}
 	}
